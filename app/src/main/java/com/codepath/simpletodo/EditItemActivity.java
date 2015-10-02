@@ -12,18 +12,18 @@ import android.widget.EditText;
 public class EditItemActivity extends AppCompatActivity {
 
     private EditText itemEditText;
-    private ItemContext itemContext;
+    private Item item;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_item);
 
-        itemContext = (ItemContext)getIntent().getSerializableExtra("item");
+        item = (Item)getIntent().getSerializableExtra("item");
 
         itemEditText = (EditText)findViewById(R.id.etEditItem);
-        itemEditText.setText(itemContext.item.text);
-        itemEditText.setSelection(itemContext.item.text.length());
+        itemEditText.setText(item.text);
+        itemEditText.setSelection(item.text.length());
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
     }
 
@@ -51,8 +51,8 @@ public class EditItemActivity extends AppCompatActivity {
 
     public void onSave(View v) {
         Intent intent = new Intent();
-        itemContext.item.text = itemEditText.getText().toString();
-        intent.putExtra("item", itemContext);
+        item.text = itemEditText.getText().toString();
+        intent.putExtra("item", item);
         setResult(RESULT_OK, intent);
         Utils.hideKeyboard(this);
         finish();

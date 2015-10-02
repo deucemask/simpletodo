@@ -21,6 +21,8 @@ public class Item extends Model implements Serializable {
     @Column
     public String text;
 
+    public int position;
+
     public Item() {
     }
 

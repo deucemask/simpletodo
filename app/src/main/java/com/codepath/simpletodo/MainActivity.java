@@ -67,19 +67,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(resultCode == RESULT_OK && requestCode == REQUEST_CODE_EDIT_ITEM) {
-            ItemContext itemContext = (ItemContext) data.getSerializableExtra("item");
-            if(itemContext == null) {
+            Item item = (Item) data.getSerializableExtra("item");
+            if(item == null) {
                 Log.e(this.getClass().getSimpleName(), "Item data is missing from edit activity");
                 return;
             }
-            if(itemContext.position > -1 && itemContext.item.text != null
-                    && !itemContext.item.text.equals(items.get(itemContext.position))) {
-                //after serialization item doesn't have the id, so we can't just use itemContext.item
-                //instead, we copy fields from itemContext.item to our existing item from items list.
-                Item existingItem = items.get(itemContext.position);
-                existingItem.text = itemContext.item.text;
+            if(item.position > -1 && item.text != null
+                    && !item.text.equals(items.get(item.position))) {
+                //after deserialization item doesn't have the id, so we can't just save this instance to db.
+                //instead, we copy fields from deserialized item to our existing item from items list.
+                Item existingItem = items.get(item.position);
+                existingItem.text = item.text;
                 //this items.set() is redundant
-                items.set(itemContext.position, existingItem);
+                items.set(item.position, existingItem);
                 ((ArrayAdapter)listView.getAdapter()).notifyDataSetChanged();
                 existingItem.save();
             }
@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Intent intent = new Intent(MainActivity.this, EditItemActivity.class);
                 Log.d(this.getClass().getSimpleName(), "item " + listItems.get(position).getId());
-                intent.putExtra("item", new ItemContext(listItems.get(position)));
+                intent.putExtra("item", listItems.get(position));
                 startActivityForResult(intent, REQUEST_CODE_EDIT_ITEM);
             }
         });
