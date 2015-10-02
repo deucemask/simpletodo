@@ -7,19 +7,16 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private ItemDAO itemDao;
-    private List<String> items;
+    private List<Item> items;
     private ListView listView;
     private static final int REQUEST_CODE_EDIT_ITEM = 99;
 
@@ -28,11 +25,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        itemDao = new ItemDAO(getFilesDir());
-
         listView = (ListView) findViewById(R.id.lvItems);
-        items = new ArrayList<>(itemDao.getItems());
-        listView.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, items));
+        items = Item.getAll();
+        listView.setAdapter(new ArrayAdapter<Item>(this, android.R.layout.simple_list_item_1, items));
 
         addItemListener(listView, items);
     }
@@ -62,37 +57,44 @@ public class MainActivity extends AppCompatActivity {
     public void onAddItem(View v) {
         EditText editText = (EditText) findViewById(R.id.etNewItem);
         String text = editText.getText().toString();
-        ((ArrayAdapter) listView.getAdapter()).add(text);
-        itemDao.saveItems(items);
+        Item item = new Item(text);
+        ((ArrayAdapter) listView.getAdapter()).add(item);
+        item.save();
         editText.setText("");
-//        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
         Utils.hideKeyboard(this);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(resultCode == RESULT_OK && requestCode == REQUEST_CODE_EDIT_ITEM) {
-            Item itemData = (Item) data.getSerializableExtra("item");
-            if(itemData == null) {
+            ItemContext itemContext = (ItemContext) data.getSerializableExtra("item");
+            if(itemContext == null) {
                 Log.e(this.getClass().getSimpleName(), "Item data is missing from edit activity");
                 return;
             }
-            if(itemData.getPosition() > -1 && !itemData.getText().equals(items.get(itemData.getPosition()))) {
-                items.set(itemData.getPosition(), itemData.getText());
+            if(itemContext.position > -1 && itemContext.item.text != null
+                    && !itemContext.item.text.equals(items.get(itemContext.position))) {
+                //after serialization item doesn't have the id, so we can't just use itemContext.item
+                //instead, we copy fields from itemContext.item to our existing item from items list.
+                Item existingItem = items.get(itemContext.position);
+                existingItem.text = itemContext.item.text;
+                //this items.set() is redundant
+                items.set(itemContext.position, existingItem);
                 ((ArrayAdapter)listView.getAdapter()).notifyDataSetChanged();
-                itemDao.saveItems(items);
+                existingItem.save();
             }
         }
     }
 
-        private void addItemListener(final ListView listView, final List<String> listItems) {
+    private void addItemListener(final ListView listView, final List<Item> listItems) {
         listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                ArrayAdapter<String> adapter = ((ArrayAdapter<String>)listView.getAdapter());
+                ArrayAdapter<String> adapter = ((ArrayAdapter<String>) listView.getAdapter());
+                Item itemForRemoval = listItems.get(position);
                 listItems.remove(position);
                 adapter.notifyDataSetChanged();
-                itemDao.saveItems(listItems);
+                itemForRemoval.delete();
                 return true;
             }
         });
@@ -101,7 +103,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Intent intent = new Intent(MainActivity.this, EditItemActivity.class);
-                intent.putExtra("item", new Item().setText(listItems.get(position)).setPosition(position));
+                Log.d(this.getClass().getSimpleName(), "item " + listItems.get(position).getId());
+                intent.putExtra("item", new ItemContext(listItems.get(position)));
                 startActivityForResult(intent, REQUEST_CODE_EDIT_ITEM);
             }
         });
